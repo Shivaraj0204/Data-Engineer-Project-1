@@ -1,0 +1,19 @@
+cd D:\CA_Asia\Banglalink\DWH_Report\Driver
+
+$date = (Get-Date).ToString("MMMd")
+$Yest_date = ((Get-Date).AddDays(-1).ToString("yyyyMMdd"))
+$ftp_path = ""
+
+#scp DWH_report_$Yest_date.xlsx onmoawxuser@10.190.82.17:/mnt/banlalink_ftp_report/
+#ssh onmoawxuser@10.190.82.17 'sh /mnt/banlalink_ftp_report/bl_upload.sh'
+
+
+$ftp_path = "'ftp://10.231.1.71/CA_REPORT_NEW/ -u dnd:dnd'"
+#$ftp_path = "'ftp://10.190.91.13/spider/local/uploads/banglalink-dhk/Jul22/ -u user:password"
+$filename = "DWH_report_$Yest_date.xlsx"
+$dest = "/mnt/banglalink_ftp_report/"
+
+scp $filename onmoawxuser@10.190.82.17:${dest}
+ssh onmoawxuser@10.190.82.17 "sh $dest/bl_upload.sh ${filename} ${ftp_path}"
+
+exit
