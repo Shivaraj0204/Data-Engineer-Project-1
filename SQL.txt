@@ -1,0 +1,202 @@
+1) Employees whose salaries are greater than their Managers' salaries.
+
+SELECT 
+		e.employee_name AS employee,
+		e.salary AS employee_salary,
+		m.employee_name AS manager,
+		m.salary AS manager_salary
+	FROM 
+		employees e
+	JOIN 
+		employees m
+	ON 
+		e.manager_id = m.employee_id
+	WHERE 
+		e.salary > m.salary;
+		
+2) Find records present in table a not in table b.
+
+	SELECT a.*
+	FROM table_a a
+	LEFT JOIN table_b b
+	ON a.common_column = b.common_column
+	WHERE b.common_column IS NULL;
+	
+3) Find the Nth highest salary.
+
+	WITH ranked_salaries AS (
+	SELECT salary, ROW_NUMBER() OVER (ORDER BY salary DESC) AS rank
+	FROM employees
+	)
+	SELECT salary
+	FROM ranked_salaries
+	WHERE rank = N;
+	
+4) Removing duplicate records from a table.
+
+	WITH CTE AS (
+		SELECT 
+			*,
+			ROW_NUMBER() OVER (PARTITION BY column1, column2, column3 ORDER BY id) AS rn
+		FROM table_name
+	)
+	DELETE FROM table_name
+	WHERE id IN (
+		SELECT id FROM CTE WHERE rn > 1
+	);
+	
+5)Find Min Max salary department wise from employee table.
+
+	SELECT department_name,
+		   MIN(salary) AS min_salary,
+		   MAX(salary) AS max_salary
+	FROM employee e
+	JOIN department d ON e.department_id = d.department_id
+	GROUP BY department_name;
+-------------------------------------------------------------------------------------------
+	WITH RankedSalaries AS (
+		SELECT department_name, salary,
+			   ROW_NUMBER() OVER (PARTITION BY department_name ORDER BY salary DESC) AS rank
+		FROM employee e
+		JOIN department d ON e.department_id = d.department_id
+	)
+	SELECT department_name, salary
+	FROM RankedSalaries
+	WHERE rank = 1;
+	
+6) Calculating rolling sum total.
+
+	SELECT 
+		date,
+		sales_amount,
+		SUM(sales_amount) OVER (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS rolling_sum
+	FROM 
+		sales
+	ORDER BY 
+		date;
+		
+	SUM(sales_amount) OVER (ORDER BY date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+	
+	SUM(sales_amount) OVER (PARTITION BY department ORDER BY date ROWS BETWEEN INTERVAL '30 days' PRECEDING AND CURRENT ROW)
+	
+7) Convert rows to columns and columns to rows without using pivot function.
+
+	SELECT
+		department,
+		MAX(CASE WHEN employee_id = 1 THEN employee_name ELSE NULL END) AS employee_1,
+		MAX(CASE WHEN employee_id = 2 THEN employee_name ELSE NULL END) AS employee_2,
+		MAX(CASE WHEN employee_id = 3 THEN employee_name ELSE NULL END) AS employee_3
+	FROM employees
+	GROUP BY department;
+	
+	SELECT 'employee_1' AS employee_column, employee_1 AS employee_name FROM department_employees
+	UNION ALL
+	SELECT 'employee_2', employee_2 FROM department_employees
+	UNION ALL
+	SELECT 'employee_3', employee_3 FROM department_employees;
+	
+8) Find Parent child hierarchy.
+
+
+
+
+
+
+
+10) Print consecutive numbers by their number input(1,2,3,4,5) and ouput (1,2,2,3,3,3,4,4,4,4,5,5,5,5,5)
+
+--- if the numbers are consecutive
+
+select n1.n,n2.n from Numbers n1 cross join Numbers n2 on n1.n >=n2.n1 order by 1,2
+
+--- if the numbers are not consecutive
+
+with max_num_table as ( select row_number() over(order by (select NULL)) as row_num from channel_dim ) select * from max_num_table where row_num <= (select max(n) from Numbers)
+
+select n1.n,n2.n from Numbers n1 cross join max_num_table n2 on n1.n >=n2.n1 and n2.n <= (select max(n) from Numbers) order by 1,2)
+
+
+11) RECURSIVE CTE
+
+WITH RECURSIVE recurcive_cte AS (  SELECT 1 AS num  UNION ALL SELECT num + 1 FROM recurcive_cte WHERE num < 11)  
+SELECT * FROM recurcive_cte ORDER BY num;
+
+
+
+12) Call duration
+
+table_ 1 (ph_no, start_time) and table_2 (ph_no, end_time)
+
+with CTE_1 as (select *, row_number() over(partiton by ph_no order by start_time) as row_num from table_1), 
+     CTE_2 as (select *, row_number() over(partiton by ph_no order by end_time) as row_num from table_2)
+	 
+select ph_no, a.start_time, b.end_time, date_diff(minute,a.start_time,b.end_time) as call_duration_in_minutes from CTE_1 a, CTE_2 b where a.ph_no = b.ph_no and a.row_num = b.row_num order by 1,2
+
+
+13) Find Actual woking days between issue_date and resolved_date
+
+table_1 (id, start_date, end_date) and table_2 (holiday_date, occasion)
+
+
+with tickets_cte as (select *,date_diff(day, start_date, end_date)- date_diff(week,start_date, end_date) as working_days from table_1 order by 1,2)
+
+select a.id, a.start_date, a.end_date, working_days - count(occasion) as actual_working_days from tickets_cte a, table_2 b where b.holiday_date between a.start_date and a.end_date group by 1,2,3,4
+
+
+14) QUery to find maximum population and minimum polulation citys in a state
+
+table_1 (id, state, city, population)
+
+with total_population as (select *, row_number() over(partition by state order by population desc) as highest_population, row_number() over(partition by state order by population asc) as lowest_population from table_1)
+
+select sate, max(case when highest_population = 1 then state end) as max_population, min(case when lowest_population = 1 then state end) as min_population from total_population group by 1
+
+
+15) table_1
+
+id  name      id  name         id  output
+1  A          1   A             3  New in Source
+2  B          2   B             4 Mismatch
+4  X          3   C             5  New in target
+5  F          4   D
+
+
+select coalesce(s.id,t.id) as id, case when t.name is null then 'New in Source'
+										when s.name is null then 'New in target'
+										else 'Mismatch' end as ouput 
+									from source s, target t where s.id = t.id where coalesce(s.name,'x') != coalesce(t.name,'y')
+									
+
+--
+16) Query to find team_name, wining matches and lost matches
+table_1 (match_id, team_1, team_2, result)
+
+with total_matches as (select team_name, case when team_1 = result then 1 else 0 end as flag from cricket_matche union all select team_name, case when team_2 = result then 1 esle 0 end as flag from cricket_matche)
+
+select team_name, count(team_name) as total_matches, sum(case when flag = 1 then 1 else 0 end) as matches_won, count(team_name) - sum(case when flag = 1 then 1 else 0 end) as lost_matches from total_matches group by 1
+
+
+17) Interchange the ids
+
+select id, name, case when id%2 = 0 then lag(id,1) over(order by id) else lead(id,1,id) over(order by id) end as new_id from seats
+
+18) Consecutive seats filled in a theater
+
+table (id , filled/not)
+
+with tickets_cte as (select id,id - row_number() over(order by id) as row_num from tickets where seat_id = 1),
+final_cte as(
+select id,count(row_num) over(partition by row_num order by row_num) as total_grp from tickets_cte )
+
+select id from final_cte where total_grp >=3
+
+
+19) in a table hire seniors and juniors with a budjet of 60000
+
+
+with seniors_cte as (select id,salary, sum(salary) over(order by salary) as cum_sal from table where experiance = 'Senior'),
+junior_cte as (select id,salary, sum(salary) over(order by salary) as cum_sal from table where experiance = 'Junior')
+
+select id,salary from seniors_cte where cum_sal <= 60000 union all
+
+select id, salary from junior_cte where cum_sal <= 60000 - (select max(cum_sal) from seniors_cte where cum_sal <= 60000)
